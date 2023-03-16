@@ -1,11 +1,11 @@
 data "yandex_compute_image" "server_image" {
-  family = var.instance_image
+  family = "debian-11"
 }
 
 resource "yandex_compute_instance" "vm-server" {
-  name                      = "server-${var.instance_name}"
+  name                      = "vm-server"
   allow_stopping_for_update = true
-  zone                      = var.zone_id
+  zone                      = yandex_vpc_subnet.mysubnet.zone
   resources {
     cores  = 2
     memory = 2
@@ -18,10 +18,11 @@ resource "yandex_compute_instance" "vm-server" {
   }
 
   network_interface {
-    subnet_id = var.subnet_id
+    subnet_id = yandex_vpc_subnet.mysubnet.id
+	nat       = true
   }
 
   metadata = {
-    ssh-key = file("~/.ssh/id_rsa.pub")
+    ssh-keys = "debian:${file("~/.ssh/id_rsa.pub")}"
   }
 }
