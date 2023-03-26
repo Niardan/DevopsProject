@@ -15,7 +15,7 @@ node("jenkins-runner-0.${GCP_PROJECT}") {
                 [
                   string(name: 'App_Brunch',
                          defaultValue: 'master',
-                         description: 'App git branch/tag \n' 
+                         description: 'App git branch/tag \n')
 						 ]
               )
       ]
