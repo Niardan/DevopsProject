@@ -1,0 +1,175 @@
+import java.text.SimpleDateFormat
+def server_image = 'tpso-nonprod/tpso-server:performance'
+def server_config_name = 'config-perfomance.json'
+def build_channel = '#builds-tpso'
+
+BUILD_USER  = '@' + getBuildUser()
+ENV_PREFIX  = 'performance'
+GCP_PROJECT = 'tpso-nonprod'
+
+node("jenkins-runner-0.${GCP_PROJECT}") {
+    properties(
+      [
+        [$class: 'JobRestrictionProperty'],
+        parameters(
+                [
+                  string(name: 'App_Brunch',
+                         defaultValue: 'master',
+                         description: 'App git branch/tag \n 
+						 ]
+              )
+      ]
+    )
+    try {
+    stage('Clone repositories') { 
+            tpso: {
+                dir('app') {
+                    checkout([$class: 'GitSCM',
+                    branches: [[name: "${App_Brunch}"]],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [            
+                      [$class: 'CloneOption',
+                          timeout: 30
+                      ]
+                    ],
+                    submoduleCfg: scm.submoduleCfg,
+                    userRemoteConfigs: [[url: 'https://github.com/vinhlee95/django-pg-docker-tutorial']]])
+                }
+            }
+          
+    }
+
+    string imagePath = "eu.gcr.io/${server_image}"
+    stage('Build Server') {
+      withEnv(['DOCKER_BUILDKIT=1']) {
+        withDockerRegistry([credentialsId: 'gcr:kefirinfra', url: 'https://eu.gcr.io'])
+        {
+          def app = docker.build(imagePath, "--build-arg BTL_REGISTRY=eu.gcr.io --build-arg BTL_BASE=${BTL_IMAGE_TAG} -f Dockerfile ./")
+          app.push()
+        }
+      }
+    }
+
+    stage('Create client config') {
+        String bucketName = "${GCP_PROJECT}-test-content-delivery"
+        dir('tmp') {
+            withEnv(["ENV_PREFIX=${ENV_PREFIX}", "GCP_PROJECT=${GCP_PROJECT}"]) {
+              sh "bash ./../functions/build.sh build-client-config > ${server_config_name}"
+            }
+            googleStorageUpload(
+                credentialsId: GCP_PROJECT,
+                bucket: "gs://${bucketName}",
+                pattern: '**'
+            )
+            deleteDir()
+        }
+    }
+
+    stage('Deploy') {
+      withEnv(["ENV_PREFIX=${ENV_PREFIX}", "GCP_PROJECT=${GCP_PROJECT}"]) {
+        battlesList = sh(returnStdout: true, script: './functions/build.sh build-battles-list')
+        battlesRegionsList = sh(returnStdout: true, script: './functions/build.sh get-battles-regions')
+        centerList = sh(returnStdout: true, script: './functions/build.sh build-center-list')
+        sh 'gcloud compute config-ssh'
+      }
+
+      withEnv(["ENV_PREFIX=${ENV_PREFIX}",
+                "BUILD_DATE=${buildDate}",
+                "GCP_PROJECT=${GCP_PROJECT}",
+                "SERVER_IMAGE_TAG=${server_image}",
+                "REGIONS_CENTER=${centerList}",
+                "REGIONS_BATTLE=${battlesList}",
+                "ROLES_BATTLE_REGIONS=${battlesRegionsList}"
+            ]) {
+        dir('ansible') {
+          sh 'ansible-galaxy install -r roles/requirements.yml'
+
+          ansiblePlaybook installation: '2.9.7',
+              limit: "tpso-${ENV_PREFIX}-*",
+              inventory: "inventory/${GCP_PROJECT}/gcp.yml",
+              playbook: 'playbooks/docker-promtail.yml',
+              extras: "-e @${WORKSPACE}/vars/promtail.yaml",
+              colorized: true,
+              become: true
+
+          ansiblePlaybook installation: '2.9.7',
+              limit: "tpso-${ENV_PREFIX}-riak*",
+              inventory: "inventory/${GCP_PROJECT}/gcp.yml",
+              playbook: 'playbooks/docker-run.yml',
+              extras: "-e @${WORKSPACE}/vars/${ENV_PREFIX}/riak.yaml",
+              colorized: true,
+              become: true
+
+          ansiblePlaybook installation: '2.9.7',
+              limit: "tpso-${ENV_PREFIX}-battle-*",
+              inventory: "inventory/${GCP_PROJECT}/gcp.yml",
+              playbook: 'playbooks/tpso.btl-deploy.yml',
+              extras: "-e @${WORKSPACE}/vars/${ENV_PREFIX}/battle.yaml",
+              colorized: true,
+              become: true,
+              forks: 10
+
+          withCredentials([string(credentialsId: 'tpso-nonprod-dev-test_auth_salt', variable: 'AUTH_SALT')]) {
+            withEnv(['ANSIBLE_NO_LOG=True']) {
+              ansiblePlaybook installation: '2.9.7',
+                  limit: "tpso-${ENV_PREFIX}-btl-center-*",
+                  inventory: "inventory/${GCP_PROJECT}/gcp.yml",
+                  playbook: 'playbooks/tpso.btl-deploy.yml',
+                  extras: "-e @${WORKSPACE}/vars/${ENV_PREFIX}/center.yaml",
+                  colorized: true,
+                  become: true,
+                  forks: 10
+            }
+          }
+        }
+            }
+    }
+    stage('Join cluster') {
+          script {
+            if (env.CLUSTER_JOIN == 'True') {
+          withEnv(["ENV_PREFIX=${ENV_PREFIX}",
+                       "GCP_PROJECT=${GCP_PROJECT}"]) {
+                echo 'Join the cluster'
+                parallel(
+                  center: {
+                    sh 'bash ./functions/gcp-compute.sh btl-cluster-join center'
+                  },
+                  battle_asia: {
+                    sh 'bash ./functions/gcp-compute.sh btl-cluster-join asia'
+                  },
+                  battle_eu: {
+                    sh 'bash ./functions/gcp-compute.sh btl-cluster-join eu'
+                  },
+                  battle_us: {
+                    sh 'bash ./functions/gcp-compute.sh btl-cluster-join us'
+                  }
+                )
+                       }
+            } else {
+          echo 'Nothing to do'
+            }
+          }
+    }
+      stage('Notify') {
+        withEnv(["BUILD_USER=${BUILD_USER}"]) {
+                  slackSend color: 'good', channel: "${build_channel}",
+                  message: """
+                  Build successful ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)
+                  Btl version: ${BTL_IMAGE_TAG}
+                  with branches:
+                    - TPSO: ${TPSO_BRANCH}
+                  Short commits:
+                    - TPSO: ${tpsoCommit}
+                  Server image: ${server_image}
+                  Config url: <https://cdn.test.tpso.kefirgames.ru/${server_config_name}|${server_config_name}>
+                  by ${BUILD_USER} at: ${getDate} and took: ${currentBuild.durationString}
+                  """
+        }
+      }
+    }
+    catch (err) {
+    currentBuild.result = 'FAILURE'
+    slackSend color: 'danger', channel: "${build_channel}", message: "Build failed ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+    throw err
+    }
+}
