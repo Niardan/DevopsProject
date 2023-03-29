@@ -1,0 +1,24 @@
+- name: Install Prepare
+  apt:
+    pkg:
+      - default-jdk
+    state: latest 
+    update_cache: yes
+      
+- name: Create user
+  user:
+   name: "jenkins"
+   state: present
+   groups: "docker, root"
+   createhome: yes
+
+- name: Create ssh directory
+  file:
+    path: "/home/jenkins/.ssh/"
+    state: directory
+
+- authorized_key:
+    user: jenkins
+    state: present
+    manage_dir: yes
+    key: "{{ lookup('file', 'id_rsa.pub') }}"
