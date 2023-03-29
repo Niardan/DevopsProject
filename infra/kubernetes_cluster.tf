@@ -1,4 +1,5 @@
 resource "yandex_kubernetes_cluster" "k8s-zonal" {
+  name       = "k8s-zonal"
   network_id = yandex_vpc_network.mynet.id
   master {
     version = local.k8s_version

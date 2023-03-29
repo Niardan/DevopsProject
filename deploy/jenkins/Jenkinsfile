@@ -42,6 +42,12 @@ node {
       }
 	  }
     }
+	
+	    stage('Deploy Server') {
+	dir('deploy/helm/application') {
+      sh "helm upgrade --install --force --create-namespace --namespace app app ."
+	  }
+    }
   }
     catch (err) {
     currentBuild.result = 'FAILURE'   

@@ -5,7 +5,7 @@
         - curl
         - gnupg
       state: latest    
-
+      update_cache: yes 
   - name: Add Docker Key
     apt_key:
       url: https://download.docker.com/linux/debian/gpg

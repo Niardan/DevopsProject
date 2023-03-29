@@ -12,11 +12,24 @@
     src: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/{{ item }}"
     dest: "/usr/local/bin/{{ item }}"
     mode: "0775"
-    owner: "root"
-    group: "root"
+    owner: "jenkins"
+    group: "jenkins"
     remote_src: true
   with_items:
     - kubectl
+    
+- name: Create kubectl config directory
+  file:
+    path: "/home/jenkins/.kube/"
+    state: directory
+    
+- name: Copy kubectl config to destination directory
+  ansible.builtin.copy:
+    src: "config"
+    dest: "/home/jenkins/.kube/config"
+    mode: "0775"
+    owner: "jenkins"
+    group: "jenkins"
     
 - name: Download helm installer
   ansible.builtin.get_url:
@@ -26,3 +39,5 @@
     
 - name: Install Helm
   shell: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/get_helm.sh"
+  
+  

@@ -7,3 +7,7 @@ infra/.terraform.tfstate.lock.info
 infra/.terraform/
 infra/terraform.tfstate.backup
 infra/terraform.tfstate
+deploy/ansible/host
+deploy/ansible/kubernetes/files/config
+infra/errored.tfstate
+*.tfstate
