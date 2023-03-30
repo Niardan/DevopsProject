@@ -50,7 +50,7 @@ spec:
             - name: POSTGRES_PASSWORD
               value: {{ .Values.env.POSTGRES_PASSWORD }}
           volumeMounts:
-            - mountPath: "/var/lib/postgresql/data"
+            - mountPath: "/var/lib/postgresql/data/"
               name: pvc-postgress
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
