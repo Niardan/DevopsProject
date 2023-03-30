@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: postgressPv
+  name: postgress-pv
 spec:
   capacity:
     storage: 1Gi
@@ -14,7 +14,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: postgressPvc
+  name: postgress-pvc
   namespace: app
 spec:
   accessModes:

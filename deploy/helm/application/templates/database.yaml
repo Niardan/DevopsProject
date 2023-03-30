@@ -31,7 +31,7 @@ spec:
       volumes:
         - name: pvc-postgress
           persistentVolumeClaim:
-            claimName: pvc-postgress
+            claimName: postgress-pvc
       containers:
         - name: db
           securityContext:
