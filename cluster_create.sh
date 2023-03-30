@@ -17,7 +17,9 @@ kubectl config set-cluster k8s-zonal --certificate-authority=/home/jenkins/.kube
 kubectl config set-credentials admin-user --token=$SA_TOKEN --kubeconfig=$KUBECTL_CONFIG_PATH
 kubectl config set-context default --cluster=k8s-zonal --user=admin-user --kubeconfig=$KUBECTL_CONFIG_PATH
 kubectl config use-context default --kubeconfig=$KUBECTL_CONFIG_PATH
+
 cd ../deploy/ansible
 ANSIBLE_HOST_KEY_CHECKING=false ansible-playbook srv.yml -i host
-cd ../infra
+
+cd ../../infra
 echo "Agent IP: $(terraform output external_ip_address_srv)"

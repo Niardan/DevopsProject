@@ -46,6 +46,7 @@ node {
 	    stage('Deploy Server') {
 	dir('app/deploy/helm/application') {
       sh "helm upgrade --install --force --create-namespace --namespace app application ."
+      sh "kubectl rollout restart deployment/application --namespace app"
 	  }
     }
   }
