@@ -16,7 +16,7 @@ resource "yandex_kubernetes_cluster" "k8s-zonal" {
     yandex_resourcemanager_folder_iam_member.vpc-public-admin,
     yandex_resourcemanager_folder_iam_member.images-puller,
     yandex_resourcemanager_folder_iam_member.k8s-clusters-admin,
-    yandex_resourcemanager_folder_iam_member.k8s-admin
+    yandex_resourcemanager_folder_iam_member.admin
   ]
 }
 
@@ -34,9 +34,9 @@ resource "yandex_resourcemanager_folder_iam_member" "k8s-clusters-admin" {
   member    = "serviceAccount:${yandex_iam_service_account.myaccount.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "k8s-admin" {  
+resource "yandex_resourcemanager_folder_iam_member" "admin" {  
   folder_id = local.folder_id
-  role      = "k8s.admin"
+  role      = "admin"
   member    = "serviceAccount:${yandex_iam_service_account.myaccount.id}"
 }
 

@@ -13,3 +13,4 @@ infra/errored.tfstate
 *.tfstate
 application/app/app/__pycache__/__init__.cpython-39.pyc
 deploy/helm/application/ca.pem
+deploy/ansible/kubernetes/files/ca.pem
