@@ -15,7 +15,8 @@ resource "yandex_kubernetes_cluster" "k8s-zonal" {
     yandex_resourcemanager_folder_iam_member.k8s-clusters-agent,
     yandex_resourcemanager_folder_iam_member.vpc-public-admin,
     yandex_resourcemanager_folder_iam_member.images-puller,
-    yandex_resourcemanager_folder_iam_member.k8s-clusters-admin
+    yandex_resourcemanager_folder_iam_member.k8s-clusters-admin,
+    yandex_resourcemanager_folder_iam_member.k8s-admin
   ]
 }
 
@@ -30,6 +31,12 @@ resource "yandex_resourcemanager_folder_iam_member" "k8s-clusters-admin" {
   # Сервисному аккаунту назначается роль "k8s.clusters.agent".
   folder_id = local.folder_id
   role      = "k8s.cluster-api.cluster-admin"
+  member    = "serviceAccount:${yandex_iam_service_account.myaccount.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "k8s-admin" {  
+  folder_id = local.folder_id
+  role      = "k8s.admin"
   member    = "serviceAccount:${yandex_iam_service_account.myaccount.id}"
 }
 

@@ -31,6 +31,14 @@
     owner: "jenkins"
     group: "jenkins"
     
+- name: Copy cluster pem to destination directory
+  ansible.builtin.copy:
+    src: "ca.pem"
+    dest: "/home/jenkins/.kube/ca.pem"
+    mode: "0775"
+    owner: "jenkins"
+    group: "jenkins"
+    
 - name: Download helm installer
   ansible.builtin.get_url:
     url: "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"  
