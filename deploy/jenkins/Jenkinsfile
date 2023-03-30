@@ -44,8 +44,8 @@ node {
     }
 	
 	    stage('Deploy Server') {
-	dir('deploy/helm/application') {
-      sh "helm upgrade --install --force --create-namespace --namespace app app ."
+	dir('app/deploy/helm/application') {
+      sh "helm upgrade --install --force --create-namespace --namespace app application ."
 	  }
     }
   }
