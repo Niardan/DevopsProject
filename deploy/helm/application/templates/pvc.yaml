@@ -4,7 +4,7 @@ metadata:
   name: postgress-pvc
   namespace: app
 spec:
-  storageClassName: standart
+  storageClassName: yc-network-hdd
   accessModes:
     - ReadWriteOnce
   resources:
