@@ -28,6 +28,10 @@ spec:
       serviceAccountName: {{ include "application.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: pvc-postgress
+          persistentVolumeClaim:
+            claimName: pvc-postgress
       containers:
         - name: db
           securityContext:
@@ -45,6 +49,9 @@ spec:
               value: {{ .Values.env.POSTGRES_USER }}
             - name: POSTGRES_PASSWORD
               value: {{ .Values.env.POSTGRES_PASSWORD }}
+          volumeMounts:
+            - mountPath: "/var/lib/postgresql/data"
+              name: pvc-postgress
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
